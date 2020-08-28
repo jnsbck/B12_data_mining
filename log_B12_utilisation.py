@@ -60,10 +60,10 @@ def get_current_capacity():
     return num, percentage
 
 def str2datetime(string, fmt="%H:%M"):
-    if type(string) == str:
-        return datetime.strptime(string, "%H:%M")
-    if type(string) == list:
-        return [datetime.strptime(x, "%H:%M") for x in string]
+    if type(string) is str:
+        return datetime.strptime(string, fmt)
+    if type(string) is list:
+        return [datetime.strptime(x, fmt) for x in string]
 
 def is_open(timestamp=datetime.now(), return_state=True):
     state = False
@@ -80,7 +80,7 @@ def is_open(timestamp=datetime.now(), return_state=True):
     opening_time, closing_time = str2datetime(opening_times[day])
     
     if return_state:
-        if timestamp.time() > opening_time.time() and timestamp.now().time() < closing_time.time():
+        if timestamp.time() > opening_time.time() and timestamp.time() < closing_time.time():
             state = True
         else:
             state = False
@@ -91,13 +91,12 @@ def is_open(timestamp=datetime.now(), return_state=True):
         next_day = weekdays[(timestamp.weekday()+1)%7]
         next_opening_time, next_closing_time = str2datetime(opening_times[next_day])
         
-        return closing_time, next_opening_time
-        
+        return closing_time, next_opening_time        
 log = pd.DataFrame(columns=["Free Spots", "Capacity", "Time", "Day", "DateTime"])
 
 if os.path.isfile(save2file):
     print("logfile already exists, adding new data to existing file.")
-    log = pd.read_csv(save2file)
+    log = pd.read_csv(save2file, sep=";")
 
 while True:
     if is_open():
@@ -105,31 +104,30 @@ while True:
             timestamp = datetime.now()
             timestamp_str = datetime.strftime(timestamp, "%H:%M, %m/%d/%Y")
             weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-            timeofday = str2datetime(timestamp)
+            timeofday = datetime.strftime(timestamp, "%H:%M")
             day = weekdays[timestamp.weekday()]
 
-            print("fetching data from B12 API @ " + timestamp_str)
+            print("fetching data from B12 API @ " + timestamp_str, end=" --> ")
             payload = get_current_capacity()
             absolute, relative = payload
             update = pd.DataFrame({"Free Spots":[absolute], 
                                    "Capacity":[relative], 
                                    "Time":[timeofday], 
-                                   "Day":[day], 
+                                   "Weekday":[day], 
                                    "DateTime":[timestamp_str]
                                   })
-
-            print("updating logfile")
+            print("Free Spots = {0}, Capacity = {1}%.".format(absolute, relative))
+            #print("updating logfile")
             log = log.append(update, ignore_index=True)
-            log.to_csv(save2file, index=False)
+            log.to_csv(save2file, index=False, sep=";")
         else:
             print("Error while trying to reach internet. Waiting 5min then trying again...")
             time.sleep(60*5)
-        time.sleep(60*5)
+        time.sleep(10)
     else:
         now = datetime.now()
         closing_time, next_opening_time = is_open(now, return_state=False)
         print("The B12 is currently closed. Waiting till it opens again @ " 
-              + datetime.strftime(next_opening_time, "%H:%M" + ".")
+              + datetime.strftime(next_opening_time, "%H:%M") + "."
              )
-        # needs to be tested
         time.sleep((next_opening_time-now).seconds)
