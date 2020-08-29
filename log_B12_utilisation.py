@@ -99,7 +99,8 @@ if os.path.isfile(save2file):
     log = pd.read_csv(save2file, sep=";")
 
 while True:
-    if is_open():
+    now = datetime.now() # neccesary?
+    if is_open(now):
         if online():
             timestamp = datetime.now()
             timestamp_str = datetime.strftime(timestamp, "%H:%M, %m/%d/%Y")
@@ -118,12 +119,12 @@ while True:
                                   })
             print("Free Spots = {0}, Capacity = {1}%.".format(absolute, relative))
             #print("updating logfile")
-            log = log.append(update, ignore_index=True)
+            log = log.append(update, ignore_index=True, sort=False)
             log.to_csv(save2file, index=False, sep=";")
+            time.sleep(60*5)
         else:
             print("Error while trying to reach internet. Waiting 5min then trying again...")
             time.sleep(60*5)
-        time.sleep(10)
     else:
         now = datetime.now()
         closing_time, next_opening_time = is_open(now, return_state=False)
