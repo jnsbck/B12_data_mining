@@ -126,9 +126,4 @@ while True:
             print("Error while trying to reach internet. Waiting 5min then trying again...")
             time.sleep(60*5)
     else:
-        now = datetime.now()
-        closing_time, next_opening_time = is_open(now, return_state=False)
-        print("The B12 is currently closed. Waiting till it opens again @ " 
-              + datetime.strftime(next_opening_time, "%H:%M") + "."
-             )
-        time.sleep((next_opening_time-now).seconds)
+        time.sleep(60*5)
