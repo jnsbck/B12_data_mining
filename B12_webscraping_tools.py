@@ -41,7 +41,7 @@ def import_logged_data(loc: str = "./log.csv") -> DataFrame:
 
 
 def deploy_data_logger(
-    update_interval: Optional[int] = 15, save2file: Optional[str] = "log.csv"
+    update_interval: Optional[int] = 5, save2file: Optional[str] = "log.csv"
 ):
     """Starts logging of the capacity of the B12 Bouldering Hall in Tuebingen.
 
@@ -72,22 +72,19 @@ def deploy_data_logger(
                 log = log.append(update, ignore_index=True, sort=False)
                 log.to_csv(save2file, index=False, sep=";")
 
-                msg = "[Success] {} - Logfile was updated. \
-                    Free Spots = {}, Capacity = {}%.".format(
+                msg = "[Success] {} - Logfile was updated. Free Spots = {}, Capacity = {}%.".format(
                     timestamp_str, abs_cap, rel_cap
                 )
                 print(msg)
 
             except HTTPError:
-                msg = "[Failure] {} - Encountered some unknown error. \
-                    Retrying again in {} mins".format(
+                msg = "[Failure] {} - Encountered some unknown error. Retrying again in {} mins".format(
                     timestamp_str, update_interval
                 )
                 print(msg)
 
             except URLError:
-                msg = "[Failure] {} - Encountered some unknown error. \
-                    Retrying again in {} mins".format(
+                msg = "[Failure] {} - Encountered some unknown error. Retrying again in {} mins".format(
                     timestamp_str, update_interval
                 )
                 print(msg)
@@ -95,8 +92,7 @@ def deploy_data_logger(
             sleep(60 * update_interval)
 
         else:
-            msg = "[Failure] {} - Internet is not reachable. \
-                Retrying in {} mins.".format(
+            msg = "[Failure] {} - Internet is not reachable. Retrying in {} mins.".format(
                 timestamp_str, update_interval
             )
             print(msg)
@@ -257,7 +253,8 @@ def simulate_scraper(
 
     if "frame" in return_as.lower():
         data = np.vstack([datetimes, times, weekdays_str, capacity])
-        df = pd.DataFrame(data.T, columns=["datetime", "time", "weekday", "capacity"])
+        df = pd.DataFrame(
+            data.T, columns=["datetime", "time", "weekday", "capacity"])
         df = df.astype({"capacity": int}).set_index("datetime")
         return df
     if "array" in return_as.lower():
@@ -365,7 +362,8 @@ def plot_capacity_matrix(
         for i in range(7):
             weekday_data = binned_cap[binned_cap.index.weekday == i]
             weekday_cap = weekday_data.groupby(weekday_data.index.time).mean()
-            padding = pd.Series([np.nan] * (24 - len(weekday_cap)), dtype=float)
+            padding = pd.Series(
+                [np.nan] * (24 - len(weekday_cap)), dtype=float)
             weekday_cap = pd.concat([weekday_cap, padding])
             mean_cap.append(weekday_cap)
 
@@ -378,11 +376,13 @@ def plot_capacity_matrix(
 
             if "weekday" in x_axis.lower():
                 weekly_cap = week_data.groupby(week_data.index.weekday).mean()
-                padding = pd.Series([np.nan] * (7 - len(weekly_cap)), dtype=float)
+                padding = pd.Series(
+                    [np.nan] * (7 - len(weekly_cap)), dtype=float)
                 weekly_cap = pd.concat([weekly_cap, padding])
             if "day" == x_axis.lower():
                 weekly_cap = week_data.groupby(week_data.index.day).mean()
-                padding = pd.Series([np.nan] * (31 - len(weekly_cap)), dtype=float)
+                padding = pd.Series(
+                    [np.nan] * (31 - len(weekly_cap)), dtype=float)
                 weekly_cap = pd.concat([weekly_cap, padding])
 
             mean_cap.append(weekly_cap)
@@ -391,29 +391,35 @@ def plot_capacity_matrix(
         for i in range(12):
             month_data = binned_cap[binned_cap.index.month == i]
             monthly_cap = month_data.groupby(month_data.index.time).mean()
-            padding = pd.Series([np.nan] * (24 - len(monthly_cap)), dtype=float)
+            padding = pd.Series(
+                [np.nan] * (24 - len(monthly_cap)), dtype=float)
             monthly_cap = pd.concat([monthly_cap, padding])
 
             if "weekday" in x_axis.lower():
-                monthly_cap = month_data.groupby(month_data.index.weekday).mean()
-                padding = pd.Series([np.nan] * (7 - len(monthly_cap)), dtype=float)
+                monthly_cap = month_data.groupby(
+                    month_data.index.weekday).mean()
+                padding = pd.Series(
+                    [np.nan] * (7 - len(monthly_cap)), dtype=float)
                 monthly_cap = pd.concat([monthly_cap, padding])
 
             if "day" == x_axis.lower():
                 monthly_cap = month_data.groupby(month_data.index.day).mean()
-                padding = pd.Series([np.nan] * (31 - len(monthly_cap)), dtype=float)
+                padding = pd.Series(
+                    [np.nan] * (31 - len(monthly_cap)), dtype=float)
                 monthly_cap = pd.concat([monthly_cap, padding])
 
             if "month" in x_axis.lower():
                 monthly_cap = month_data.groupby(month_data.index.month).mean()
-                padding = pd.Series([np.nan] * (12 - len(monthly_cap)), dtype=float)
+                padding = pd.Series(
+                    [np.nan] * (12 - len(monthly_cap)), dtype=float)
                 monthly_cap = pd.concat([monthly_cap, padding])
 
             if "week" == x_axis.lower():
                 monthly_cap = month_data.groupby(
                     month_data.index.isocalendar().week
                 ).mean()
-                padding = pd.Series([np.nan] * (5 - len(monthly_cap)), dtype=float)
+                padding = pd.Series(
+                    [np.nan] * (5 - len(monthly_cap)), dtype=float)
                 monthly_cap = pd.concat([monthly_cap, padding])
 
             mean_cap.append(monthly_cap)
