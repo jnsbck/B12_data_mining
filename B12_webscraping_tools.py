@@ -1,8 +1,10 @@
+# data handling
 import pandas as pd
 import numpy as np
 import re
 import os
 
+# webscraping
 from bs4 import BeautifulSoup
 import requests  # fetches html content of a website
 
@@ -11,12 +13,13 @@ from urllib.request import HTTPError
 from urllib.request import urlopen
 from urllib.request import URLError
 
+# plotting
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.pyplot as plt
+
+# other
 from time import sleep  # for sleep function
 from datetime import datetime, date, time, timedelta
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import pandas as pd
-import matplotlib.pyplot as plt
 
 # types
 from pandas import DataFrame
