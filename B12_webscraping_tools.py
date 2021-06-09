@@ -28,8 +28,8 @@ from typing import Tuple, List, Optional
 from numpy import ndarray
 
 
-def prune_data(data: DataFrame, between: Optional[Tuple[int]] = None) -> DataFrame:
-    """Gets rid of the uneccessary data when the B12 is not open.
+def prune_data(data: DataFrame, between: Optional[Tuple[int]] = None, buffer=15) -> DataFrame:
+    """Gets rid of data aquired while the B12 was not open.
 
     Removes datapoints outside of a specified time intervall, or if
     nothing is specified, the opening times from the B12 website are used.
@@ -41,13 +41,14 @@ def prune_data(data: DataFrame, between: Optional[Tuple[int]] = None) -> DataFra
         data: Occupancy data.
         between: Outside of this intervall data will be disregarged.
             If nothing is specified, the opening times are used.
+        buffer: Allows for some time before opening and after closing to be considered.
 
     Returns:
         data with uneccessary data points removed.
     """
     if between != None:
-        after_opening = np.array(data.index.time > time(8, 0))
-        b4_closing = np.array(data.index.time < time(23, 0))
+        after_opening = np.array(data.index.time > time(between[0], 0))
+        b4_closing = np.array(data.index.time < time(between[1], 0))
         is_open = np.logical_and(after_opening, b4_closing)
 
         return data[is_open]
@@ -62,10 +63,10 @@ def prune_data(data: DataFrame, between: Optional[Tuple[int]] = None) -> DataFra
                          "Sun": ["10:00", "21:30"]}
 
         def map_openinghours2time(x, idx): return datetime.strptime(
-            opening_times[x][idx], "%H:%M").time()
+            opening_times[x][idx], "%H:%M") + (2*idx-1)*timedelta(minutes=buffer)
 
         def day2time_mapper(x): return [map_openinghours2time(
-            x, 0), map_openinghours2time(x, 1)]
+            x, 0).time(), map_openinghours2time(x, 1).time()]
 
         weekday = np.array(list(opening_times.keys()))
         weekdays = weekday[data.index.weekday]
