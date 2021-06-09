@@ -24,11 +24,13 @@ from datetime import datetime, date, time, timedelta
 # types
 from pandas import DataFrame
 from bs4 import BeautifulSoup
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Callable
 from numpy import ndarray
 
 
-def prune_data(data: DataFrame, outside_of: Optional[Tuple[int]] = None, buffer=15) -> DataFrame:
+def prune_data(
+    data: DataFrame, outside_of: Optional[Tuple[int]] = None, buffer=15
+) -> DataFrame:
     """Gets rid of data aquired while the B12 was not open.
 
     Removes datapoints outside of a specified time intervall, or if
@@ -54,19 +56,26 @@ def prune_data(data: DataFrame, outside_of: Optional[Tuple[int]] = None, buffer=
         return data[is_open]
 
     else:
-        opening_times = {"Mon": ["09:30", "23:00"],
-                         "Tue": ["09:30", "23:00"],
-                         "Wed": ["08:30", "23:00"],
-                         "Thu": ["12:30", "23:00"],
-                         "Fri": ["09:30", "23:00"],
-                         "Sat": ["10:00", "22:00"],
-                         "Sun": ["10:00", "21:30"]}
+        opening_times = {
+            "Mon": ["09:30", "23:00"],
+            "Tue": ["09:30", "23:00"],
+            "Wed": ["08:30", "23:00"],
+            "Thu": ["12:30", "23:00"],
+            "Fri": ["09:30", "23:00"],
+            "Sat": ["10:00", "22:00"],
+            "Sun": ["10:00", "21:30"],
+        }
 
-        def map_openinghours2time(x, idx): return datetime.strptime(
-            opening_times[x][idx], "%H:%M") + (2*idx-1)*timedelta(minutes=buffer)
+        def map_openinghours2time(x, idx):
+            return datetime.strptime(opening_times[x][idx], "%H:%M") + (
+                2 * idx - 1
+            ) * timedelta(minutes=buffer)
 
-        def day2time_mapper(x): return [map_openinghours2time(
-            x, 0).time(), map_openinghours2time(x, 1).time()]
+        def day2time_mapper(x):
+            return [
+                map_openinghours2time(x, 0).time(),
+                map_openinghours2time(x, 1).time(),
+            ]
 
         weekday = np.array(list(opening_times.keys()))
         weekdays = weekday[data.index.weekday]
@@ -98,7 +107,11 @@ def import_logged_data(loc: str = "./log.csv") -> DataFrame:
 
 
 def deploy_data_logger(
-    update_interval: Optional[int] = 5, save2file: Optional[str] = "./log.csv"
+    update_interval: Optional[int] = 5,
+    save2file: Optional[str] = "./log.csv",
+    run_every: int = 3,
+    update_func: Optional[Callable] = None,
+    *args
 ):
     """Starts logging of the capacity of the B12 Bouldering Hall in Tuebingen.
 
@@ -109,6 +122,10 @@ def deploy_data_logger(
     Args:
         update_interval: Number of minutes between subsequent requests.
         save2file: Location of the file, which the fetched data is saved to.
+        run_every: How many intervals until update function is called.
+        update_func: Can be used to execute whatever within loop. Can be used to
+        update plots for example.
+        *args: Args for the update_func.
     """
     # seed logfile with header if logfile is empty.
     if not os.path.exists(save2file):
@@ -117,11 +134,13 @@ def deploy_data_logger(
         header = pd.DataFrame(columns=["datetime", "free spots", "capacity"])
         header.to_csv(save2file, index=False, sep=";", mode="a")
         msg = "[Success] {} - New logfile was created @ {}".format(
-            timestamp_str, save2file)
+            timestamp_str, save2file
+        )
         print(msg)
 
     # Check occupancy in regular intervals, while catching network errors.
     while True:
+        counter = 0
         timestamp = datetime.now()
         timestamp_str = datetime.strftime(timestamp, "%H:%M, %m/%d/%Y")
         if online():
@@ -148,15 +167,19 @@ def deploy_data_logger(
                 )
                 print(msg)
 
-            sleep(60*update_interval)
-
         else:
             msg = "[Failure] {} - Internet is not reachable. Retrying in {} mins.".format(
                 timestamp_str, update_interval
             )
             print(msg)
 
-            sleep(60*update_interval)
+        if update_func != None:
+            counter += 1
+            if counter == run_every:
+                update_func(*args)
+                counter = 0
+
+        sleep(60 * update_interval)
 
 
 def webpage2soup(url: str, parser: Optional[str] = "html.parser") -> BeautifulSoup:
@@ -173,7 +196,7 @@ def webpage2soup(url: str, parser: Optional[str] = "html.parser") -> BeautifulSo
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1)\
      AppleWebKit/537.36 (KHTML, like Gecko)\
-     Chrome/41.0.2228.0 Safari/537.36",
+     Chrome/41.0.2228.0 Safari/537.36"
     }
     res = requests.get(url, headers=headers)
     res.raise_for_status()
@@ -347,6 +370,9 @@ def plot_avg_capacity(
         quantity: The quantity to plot. Usually either capacity or free spots.
             Can however also be a custom quantity.
         figsize: Specifies figure dimensions.
+
+    Returns:
+        Axes object.
     """
 
     if start_datetime != None:
@@ -360,8 +386,8 @@ def plot_avg_capacity(
         .mean()
     )
     avg_per_timedelta_df = pd.DataFrame(avg_per_timedelta, columns=[quantity])
-    avg_per_timedelta_df.plot(figsize=figsize)
-    plt.show()
+    ax = avg_per_timedelta_df.plot(figsize=figsize, grid=True)
+    return ax
 
 
 def plot_capacity_matrix(
@@ -396,118 +422,48 @@ def plot_capacity_matrix(
             specified the first datapoint is chosen.
         end_datetime: The ending timestamp can be specified. If none is specified
             the last datapoint is chosen.
+
+    Returns:
+        Fig object.
+        Axes object.
     """
-
-    time_intervalls = {
-        "hour": "H",
-        "day": "D",
-        "min": "T",
-        "month": "M",
-        "week": "W",
-        "weekday": "D",
-    }
-
-    mean_cap = []
     yticklabels = None
-
-    if start_datetime != None:
-        data = data[start_datetime:]
-    if end_datetime != None:
-        data = data[:end_datetime]
     if "weekday" in x_axis.lower():
         x_increment = 1
 
-    binned_cap = (
-        pd.Series(index=data.index, data=np.array(data[quantity]))
-        .resample(str(x_increment) + time_intervalls[x_axis])
-        .mean()
+    mean_cap = capacity_matrix(
+        data, y_axis, x_axis, x_increment, quantity, start_datetime, end_datetime
     )
-    time_padding = pd.Series(np.nan, index=pd.date_range(
-        start="01/01/2021", end="01/01/2022", freq=str(x_increment) + time_intervalls[x_axis]))
 
-    if "weekday" in y_axis.lower():
-        for i in range(7):
-            occupancy = time_padding.groupby(
-                time_padding.index.time).mean()
-            weekday_data = binned_cap[binned_cap.index.weekday == i]
-            weekday_cap = weekday_data.groupby(weekday_data.index.time).mean()
-            occupancy[weekday_cap.index] = weekday_cap.values
-            mean_cap.append(occupancy)
-
-    if "week" == y_axis.lower():
-        for i in range(52):
-            occupancy = time_padding.groupby(
-                time_padding.index.time).mean()
-            week_data = binned_cap[binned_cap.index.isocalendar().week == i]
-            weekly_cap = week_data.groupby(week_data.index.time).mean()
-            occupancy[weekly_cap.index] = weekly_cap.values
-
-            if "weekday" in x_axis.lower():
-                occupancy = time_padding.groupby(
-                    time_padding.index.weekday).mean()
-                weekly_cap = week_data.groupby(week_data.index.weekday).mean()
-                occupancy[weekly_cap.index] = weekly_cap.values
-            if "day" == x_axis.lower():
-                occupancy = time_padding.groupby(
-                    time_padding.index.day).mean()
-                weekly_cap = week_data.groupby(week_data.index.day).mean()
-                occupancy[weekly_cap.index] = weekly_cap.values
-
-            mean_cap.append(occupancy)
-
-    if "month" in y_axis.lower():
-        for i in range(12):
-            occupancy = time_padding.groupby(
-                time_padding.index.time).mean()
-            month_data = binned_cap[binned_cap.index.month == i]
-            monthly_cap = month_data.groupby(month_data.index.time).mean()
-            occupancy[monthly_cap.index] = monthly_cap.values
-
-            if "weekday" in x_axis.lower():
-                occupancy = time_padding.groupby(
-                    time_padding.index.weekday).mean()
-                monthly_cap = month_data.groupby(
-                    month_data.index.weekday).mean()
-                occupancy[monthly_cap.index] = monthly_cap.values
-
-            if "day" == x_axis.lower():
-                occupancy = time_padding.groupby(
-                    time_padding.index.day).mean()
-                monthly_cap = month_data.groupby(month_data.index.day).mean()
-                occupancy[monthly_cap.index] = monthly_cap.values
-
-            if "month" in x_axis.lower():
-                occupancy = time_padding.groupby(
-                    time_padding.index.month).mean()
-                monthly_cap = month_data.groupby(month_data.index.month).mean()
-                occupancy[monthly_cap.index] = monthly_cap.values
-
-            if "week" == x_axis.lower():
-                occupancy = time_padding.groupby(
-                    time_padding.index.week).mean()
-                monthly_cap = month_data.groupby(
-                    month_data.index.isocalendar().week
-                ).mean()
-                occupancy[monthly_cap.index] = monthly_cap.values
-
-            mean_cap.append(occupancy)
-
-    mean_cap = np.vstack(mean_cap)
-
-    plt.figure(figsize=figsize)
+    fig = plt.figure(figsize=figsize)
     ax = plt.gca()
 
-    im = ax.imshow(mean_cap, cmap="jet", vmin=0, vmax=100)
+    im = ax.imshow(mean_cap, cmap="jet", vmin=0, vmax=100, aspect="auto")
+    ax.grid(True)
 
     if "hour" in x_axis.lower():
         keys = list(range(24))
         timestamps = ["0{}:00".format(i) for i in keys if i < 10] + [
             "{}:00".format(i) for i in keys if i >= 10
         ]
-        hours_dct = dict(zip(keys, timestamps))
+        hours_dct = dict(zip(keys, timestamps[::x_increment]))
         hours2time = [
             hours_dct.get(t, ax.get_xticks()[i]) for i, t in enumerate(ax.get_xticks())
         ]
+
+        ax.set_xticks(ax.get_xticks().tolist())
+        ax.set_xticklabels(hours2time)
+
+    if "min" in x_axis.lower():
+        keys = list(range(24 * 60))
+        timestamps = [
+            "0{}:00".format(int(i / 60)) for i in keys if int(i / 60) < 10
+        ] + ["{}:00".format(int(i / 60)) for i in keys if int(i / 60) >= 10]
+        hours_dct = dict(zip(keys, timestamps[::x_increment]))
+        hours2time = [
+            hours_dct.get(t, ax.get_xticks()[i]) for i, t in enumerate(ax.get_xticks())
+        ]
+        ax.set_xticks(ax.get_xticks().tolist())
         ax.set_xticklabels(hours2time)
 
     if "month" in y_axis.lower():
@@ -530,6 +486,7 @@ def plot_capacity_matrix(
         months2time = [
             hours_dct.get(t, ax.get_yticks()[i]) for i, t in enumerate(ax.get_yticks())
         ]
+        ax.set_yticks(ax.get_yticks().tolist())
         ax.set_yticklabels(months2time)
 
     if "month" in x_axis.lower():
@@ -548,10 +505,11 @@ def plot_capacity_matrix(
             "Nov",
             "Dec",
         ]
-        hours_dct = dict(zip(keys, months))
+        hours_dct = dict(zip(keys, months[::x_increment]))
         months2time = [
             hours_dct.get(t, ax.get_xticks()[i]) for i, t in enumerate(ax.get_xticks())
         ]
+        ax.set_xticks(ax.get_xticks().tolist())
         ax.set_xticklabels(months2time)
 
     if "weekday" in y_axis.lower():
@@ -568,6 +526,7 @@ def plot_capacity_matrix(
             weekdays_dict.get(t, ax.get_yticks()[i])
             for i, t in enumerate(ax.get_yticks())
         ]
+        ax.set_yticks(ax.get_yticks().tolist())
         ax.set_yticklabels(yticklabels)
 
     if "weekday" in x_axis.lower():
@@ -584,7 +543,10 @@ def plot_capacity_matrix(
             weekdays_dict.get(t, ax.get_xticks()[i])
             for i, t in enumerate(ax.get_xticks())
         ]
+        ax.set_xticks(ax.get_xticks().tolist())
         ax.set_xticklabels(xticklabels)
+
+    # x_incrementation does not work for days
 
     ax.set_xlabel("time")
 
@@ -593,4 +555,135 @@ def plot_capacity_matrix(
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="2%", pad=0.20)
     plt.colorbar(im, cax=cax)
-    plt.show()
+
+    return fig, ax
+
+
+def capacity_matrix(
+    data: DataFrame,
+    y_axis: str = "weekday",
+    x_axis: str = "hour",
+    x_increment: int = 1,
+    quantity: str = "capacity",
+    start_datetime: Optional[str] = None,
+    end_datetime: Optional[str] = None,
+) -> ndarray:
+    """Computes the occupancy of the B12 for different time chunks.
+
+    Depedning on the bin width chosen for the bins in y and x dimensions,
+    the z dimension is then used to colourcode the resulting bins based on
+    the capacity at this time on average. Data gets averaged in both x and y
+    dims.
+
+    Possible time-binsizes are: hour, day, min, month, week, weekday.
+
+    Args:
+        data: B12 usage data.
+        y_axis: Size of timebins in y dimension.
+        x_axis: Size of timebins in x dimension.
+        x_increment: Increments the x timebins.
+            Example x_axis = min, x_increment = 30 - -> 30min increments.
+        quantity: The quantity to plot. Usually either capacity or free spots.
+            Can however also be a custom quantity.
+        start_datetime: The starting timestamp can be specified. If none is
+            specified the first datapoint is chosen.
+        end_datetime: The ending timestamp can be specified. If none is specified
+            the last datapoint is chosen.
+
+    Returns:
+        Matrix containing mean of the occupancy per 2D timebin (i,j).
+    """
+    time_intervalls = {
+        "hour": "H",
+        "day": "D",
+        "min": "T",
+        "month": "M",
+        "week": "W",
+        "weekday": "D",
+    }
+
+    mean_cap = []
+
+    if start_datetime != None:
+        data = data[start_datetime:]
+    if end_datetime != None:
+        data = data[:end_datetime]
+
+    binned_cap = (
+        pd.Series(index=data.index, data=np.array(data[quantity]))
+        .resample(str(x_increment) + time_intervalls[x_axis])
+        .mean()
+    )
+    time_padding = pd.Series(
+        np.nan,
+        index=pd.date_range(
+            start="01/01/2021",
+            end="01/01/2022",
+            freq=str(x_increment) + time_intervalls[x_axis],
+        ),
+    )
+
+    if "weekday" in y_axis.lower():
+        for i in range(7):
+            occupancy = time_padding.groupby(time_padding.index.time).mean()
+            weekday_data = binned_cap[binned_cap.index.weekday == i]
+            weekday_cap = weekday_data.groupby(weekday_data.index.time).mean()
+            occupancy[weekday_cap.index] = weekday_cap.values
+            mean_cap.append(occupancy)
+
+    if "week" == y_axis.lower():
+        for i in range(52):
+            occupancy = time_padding.groupby(time_padding.index.time).mean()
+            week_data = binned_cap[binned_cap.index.isocalendar().week == i]
+            weekly_cap = week_data.groupby(week_data.index.time).mean()
+            occupancy[weekly_cap.index] = weekly_cap.values
+
+            if "weekday" in x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.weekday).mean()
+                weekly_cap = week_data.groupby(week_data.index.weekday).mean()
+                occupancy[weekly_cap.index] = weekly_cap.values
+            if "day" == x_axis.lower():
+                occupancy = time_padding.groupby(time_padding.index.day).mean()
+                weekly_cap = week_data.groupby(week_data.index.day).mean()
+                occupancy[weekly_cap.index] = weekly_cap.values
+
+            mean_cap.append(occupancy)
+
+    if "month" in y_axis.lower():
+        for i in range(12):
+            occupancy = time_padding.groupby(time_padding.index.time).mean()
+            month_data = binned_cap[binned_cap.index.month == i]
+            monthly_cap = month_data.groupby(month_data.index.time).mean()
+            occupancy[monthly_cap.index] = monthly_cap.values
+
+            if "weekday" in x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.weekday).mean()
+                monthly_cap = month_data.groupby(
+                    month_data.index.weekday).mean()
+                occupancy[monthly_cap.index] = monthly_cap.values
+
+            if "day" == x_axis.lower():
+                occupancy = time_padding.groupby(time_padding.index.day).mean()
+                monthly_cap = month_data.groupby(month_data.index.day).mean()
+                occupancy[monthly_cap.index] = monthly_cap.values
+
+            if "month" in x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.month).mean()
+                monthly_cap = month_data.groupby(month_data.index.month).mean()
+                occupancy[monthly_cap.index] = monthly_cap.values
+
+            if "week" == x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.week).mean()
+                monthly_cap = month_data.groupby(
+                    month_data.index.isocalendar().week
+                ).mean()
+                occupancy[monthly_cap.index] = monthly_cap.values
+
+            mean_cap.append(occupancy)
+
+    mean_cap = np.vstack(mean_cap)
+    return mean_cap
