@@ -28,7 +28,7 @@ from typing import Tuple, List, Optional
 from numpy import ndarray
 
 
-def prune_data(data: DataFrame, between: Optional[Tuple[int]] = None, buffer=15) -> DataFrame:
+def prune_data(data: DataFrame, outside_of: Optional[Tuple[int]] = None, buffer=15) -> DataFrame:
     """Gets rid of data aquired while the B12 was not open.
 
     Removes datapoints outside of a specified time intervall, or if
@@ -39,16 +39,16 @@ def prune_data(data: DataFrame, between: Optional[Tuple[int]] = None, buffer=15)
 
     Args:
         data: Occupancy data.
-        between: Outside of this intervall data will be disregarged.
+        outside_of: Outside of this intervall data will be disregarged.
             If nothing is specified, the opening times are used.
         buffer: Allows for some time before opening and after closing to be considered.
 
     Returns:
         data with uneccessary data points removed.
     """
-    if between != None:
-        after_opening = np.array(data.index.time > time(between[0], 0))
-        b4_closing = np.array(data.index.time < time(between[1], 0))
+    if outside_of != None:
+        after_opening = np.array(data.index.time > time(outside_of[0], 0))
+        b4_closing = np.array(data.index.time < time(outside_of[1], 0))
         is_open = np.logical_and(after_opening, b4_closing)
 
         return data[is_open]
@@ -417,71 +417,75 @@ def plot_capacity_matrix(
         .resample(time_intervalls[x_axis])
         .mean()
     )
+    time_padding = pd.Series(np.nan, index=pd.date_range(
+        start="01/01/2021", end="01/01/2022", freq=time_intervalls[x_axis]))
+
     if "weekday" in y_axis.lower():
         for i in range(7):
+            occupancy = time_padding.groupby(
+                time_padding.index.time).mean()
             weekday_data = binned_cap[binned_cap.index.weekday == i]
             weekday_cap = weekday_data.groupby(weekday_data.index.time).mean()
-            padding = pd.Series(
-                [np.nan] * (24 - len(weekday_cap)), dtype=float)
-            weekday_cap = pd.concat([weekday_cap, padding])
-            mean_cap.append(weekday_cap)
+            occupancy[weekday_cap.index] = weekday_cap.values
+            mean_cap.append(occupancy)
 
     if "week" == y_axis.lower():
         for i in range(52):
+            occupancy = time_padding.groupby(
+                time_padding.index.time).mean()
             week_data = binned_cap[binned_cap.index.isocalendar().week == i]
             weekly_cap = week_data.groupby(week_data.index.time).mean()
-            padding = pd.Series([np.nan] * (24 - len(weekly_cap)), dtype=float)
-            weekly_cap = pd.concat([weekly_cap, padding])
+            occupancy[weekly_cap.index] = weekly_cap.values
 
             if "weekday" in x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.weekday).mean()
                 weekly_cap = week_data.groupby(week_data.index.weekday).mean()
-                padding = pd.Series(
-                    [np.nan] * (7 - len(weekly_cap)), dtype=float)
-                weekly_cap = pd.concat([weekly_cap, padding])
+                occupancy[weekly_cap.index] = weekly_cap.values
             if "day" == x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.day).mean()
                 weekly_cap = week_data.groupby(week_data.index.day).mean()
-                padding = pd.Series(
-                    [np.nan] * (31 - len(weekly_cap)), dtype=float)
-                weekly_cap = pd.concat([weekly_cap, padding])
+                occupancy[weekly_cap.index] = weekly_cap.values
 
-            mean_cap.append(weekly_cap)
+            mean_cap.append(occupancy)
 
     if "month" in y_axis.lower():
         for i in range(12):
+            occupancy = time_padding.groupby(
+                time_padding.index.time).mean()
             month_data = binned_cap[binned_cap.index.month == i]
             monthly_cap = month_data.groupby(month_data.index.time).mean()
-            padding = pd.Series(
-                [np.nan] * (24 - len(monthly_cap)), dtype=float)
-            monthly_cap = pd.concat([monthly_cap, padding])
+            occupancy[monthly_cap.index] = monthly_cap.values
 
             if "weekday" in x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.weekday).mean()
                 monthly_cap = month_data.groupby(
                     month_data.index.weekday).mean()
-                padding = pd.Series(
-                    [np.nan] * (7 - len(monthly_cap)), dtype=float)
-                monthly_cap = pd.concat([monthly_cap, padding])
+                occupancy[monthly_cap.index] = monthly_cap.values
 
             if "day" == x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.day).mean()
                 monthly_cap = month_data.groupby(month_data.index.day).mean()
-                padding = pd.Series(
-                    [np.nan] * (31 - len(monthly_cap)), dtype=float)
-                monthly_cap = pd.concat([monthly_cap, padding])
+                occupancy[monthly_cap.index] = monthly_cap.values
 
             if "month" in x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.month).mean()
                 monthly_cap = month_data.groupby(month_data.index.month).mean()
-                padding = pd.Series(
-                    [np.nan] * (12 - len(monthly_cap)), dtype=float)
-                monthly_cap = pd.concat([monthly_cap, padding])
+                occupancy[monthly_cap.index] = monthly_cap.values
 
             if "week" == x_axis.lower():
+                occupancy = time_padding.groupby(
+                    time_padding.index.week).mean()
                 monthly_cap = month_data.groupby(
                     month_data.index.isocalendar().week
                 ).mean()
-                padding = pd.Series(
-                    [np.nan] * (5 - len(monthly_cap)), dtype=float)
-                monthly_cap = pd.concat([monthly_cap, padding])
+                occupancy[monthly_cap.index] = monthly_cap.values
 
-            mean_cap.append(monthly_cap)
+            mean_cap.append(occupancy)
 
     mean_cap = np.vstack(mean_cap)
 
