@@ -442,29 +442,22 @@ def plot_capacity_matrix(
     ax.grid(True)
 
     if "hour" in x_axis.lower():
-        keys = list(range(24))
-        timestamps = ["0{}:00".format(i) for i in keys if i < 10] + [
-            "{}:00".format(i) for i in keys if i >= 10
-        ]
-        hours_dct = dict(zip(keys, timestamps[::x_increment]))
-        hours2time = [
-            hours_dct.get(t, ax.get_xticks()[i]) for i, t in enumerate(ax.get_xticks())
+        keys = range(int(25/x_increment))
+        timestamps = ["0{}:00".format(int(i*x_increment)) for i in keys if int(i*x_increment) < 10] + [
+            "{}:00".format(int(i*x_increment)) for i in keys if int(i*x_increment) >= 10
         ]
 
-        ax.set_xticks(ax.get_xticks().tolist())
-        ax.set_xticklabels(hours2time)
+        ax.set_xticks(keys)
+        ax.set_xticklabels(timestamps)
 
     if "min" in x_axis.lower():
-        keys = list(range(24 * 60))
+        keys = range(int(25*60/x_increment))
         timestamps = [
-            "0{}:00".format(int(i / 60)) for i in keys if int(i / 60) < 10
-        ] + ["{}:00".format(int(i / 60)) for i in keys if int(i / 60) >= 10]
-        hours_dct = dict(zip(keys, timestamps[::x_increment]))
-        hours2time = [
-            hours_dct.get(t, ax.get_xticks()[i]) for i, t in enumerate(ax.get_xticks())
-        ]
-        ax.set_xticks(ax.get_xticks().tolist())
-        ax.set_xticklabels(hours2time)
+            "0{}:00".format(int(i*x_increment / 60)) for i in keys if int(i * x_increment / 60) < 10
+        ] + ["{}:00".format(int(i*x_increment / 60)) for i in keys if int(i * x_increment / 60) >= 10]
+
+        ax.set_xticks(keys[::12])
+        ax.set_xticklabels(timestamps[::12])
 
     if "month" in y_axis.lower():
         keys = list(range(12))
@@ -488,9 +481,10 @@ def plot_capacity_matrix(
         ]
         ax.set_yticks(ax.get_yticks().tolist())
         ax.set_yticklabels(months2time)
+        ax.set_ylim(0, 11)
 
     if "month" in x_axis.lower():
-        keys = list(range(12))
+        keys = list(range(int(12/x_increment)))
         months = [
             "Jan",
             "Feb",
@@ -505,12 +499,9 @@ def plot_capacity_matrix(
             "Nov",
             "Dec",
         ]
-        hours_dct = dict(zip(keys, months[::x_increment]))
-        months2time = [
-            hours_dct.get(t, ax.get_xticks()[i]) for i, t in enumerate(ax.get_xticks())
-        ]
-        ax.set_xticks(ax.get_xticks().tolist())
-        ax.set_xticklabels(months2time)
+        lables = [months[int(x_increment*key)] for key in keys]
+        ax.set_xticks(keys)
+        ax.set_xticklabels(lables)
 
     if "weekday" in y_axis.lower():
         weekdays_dict = {
@@ -528,6 +519,7 @@ def plot_capacity_matrix(
         ]
         ax.set_yticks(ax.get_yticks().tolist())
         ax.set_yticklabels(yticklabels)
+        ax.set_ylim(0, 6)
 
     if "weekday" in x_axis.lower():
         weekdays_dict = {
@@ -545,6 +537,7 @@ def plot_capacity_matrix(
         ]
         ax.set_xticks(ax.get_xticks().tolist())
         ax.set_xticklabels(xticklabels)
+        ax.set_xlim(0, 6)
 
     # x_incrementation does not work for days
 
