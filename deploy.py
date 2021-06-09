@@ -33,6 +33,7 @@ def update_plots():
             shell=True, stdout=cmd.DEVNULL)
     cmd.run("git push -u origin master -f", check=True,
             shell=True, stdout=cmd.DEVNULL)
+    print("[Success] Update plots were pushed to the webpage.")
 
 
-deploy_data_logger(update_interval=1, update_func=update_plots, run_every=1)
+deploy_data_logger(update_interval=5, update_func=update_plots, run_every=3)
