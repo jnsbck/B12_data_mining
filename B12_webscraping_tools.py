@@ -29,7 +29,7 @@ from numpy import ndarray
 
 
 def import_logged_data(loc: str = "./log.csv") -> DataFrame:
-    """Import looged capacity data for B12 as DataFrame.
+    """Import logged capacity data for B12 as DataFrame.
 
     Args:
         loc: Location of logfile.
@@ -57,6 +57,7 @@ def deploy_data_logger(
         update_interval: Number of minutes between subsequent requests.
         save2file: Location of the file, which the fetched data is saved to.
     """
+    # seed logfile with header if logfile is empty.
     if not os.path.exists(save2file):
         timestamp = datetime.now()
         timestamp_str = datetime.strftime(timestamp, "%H:%M, %m/%d/%Y")
@@ -82,13 +83,13 @@ def deploy_data_logger(
                 print(msg)
 
             except HTTPError:
-                msg = "[Failure] {} - Encountered some unknown error. Retrying again in {} mins".format(
+                msg = "[Failure] {} - Encountered some unknown error. Retrying in {} mins".format(
                     timestamp_str, update_interval
                 )
                 print(msg)
 
             except URLError:
-                msg = "[Failure] {} - Encountered some unknown error. Retrying again in {} mins".format(
+                msg = "[Failure] {} - Encountered some unknown error. Retrying in {} mins".format(
                     timestamp_str, update_interval
                 )
                 print(msg)
