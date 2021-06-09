@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import re
+import os
 
 from bs4 import BeautifulSoup
 import requests  # fetches html content of a website
@@ -41,7 +42,7 @@ def import_logged_data(loc: str = "./log.csv") -> DataFrame:
 
 
 def deploy_data_logger(
-    update_interval: Optional[int] = 5, save2file: Optional[str] = "log.csv"
+    update_interval: Optional[int] = 5, save2file: Optional[str] = "./log.csv"
 ):
     """Starts logging of the capacity of the B12 Bouldering Hall in Tuebingen.
 
@@ -53,7 +54,14 @@ def deploy_data_logger(
         update_interval: Number of minutes between subsequent requests.
         save2file: Location of the file, which the fetched data is saved to.
     """
-    log = pd.DataFrame(columns=["datetime", "free spots", "capacity"])
+    if not os.path.exists(save2file):
+        timestamp = datetime.now()
+        timestamp_str = datetime.strftime(timestamp, "%H:%M, %m/%d/%Y")
+        header = pd.DataFrame(columns=["datetime", "free spots", "capacity"])
+        header.to_csv(save2file, index=False, sep=";", mode="a")
+        msg = "[Success] {} - New logfile was created @ {}".format(
+            timestamp_str, save2file)
+        print(msg)
 
     while True:
         timestamp = datetime.now()
@@ -61,16 +69,9 @@ def deploy_data_logger(
         if online():
             try:
                 abs_cap, rel_cap = get_current_capacity()
-
-                dct = {
-                    "datetime": [timestamp_str],
-                    "free spots": [abs_cap],
-                    "capacity": [rel_cap],
-                }
-                update = pd.DataFrame(dct)
-
-                log = log.append(update, ignore_index=True, sort=False)
-                log.to_csv(save2file, index=False, sep=";")
+                update = pd.DataFrame([[timestamp_str, abs_cap, rel_cap]])
+                update.to_csv(save2file, index=False,
+                              sep=";", header=False, mode="a")
 
                 msg = "[Success] {} - Logfile was updated. Free Spots = {}, Capacity = {}%.".format(
                     timestamp_str, abs_cap, rel_cap
@@ -89,7 +90,7 @@ def deploy_data_logger(
                 )
                 print(msg)
 
-            sleep(60 * update_interval)
+            sleep(60*update_interval)
 
         else:
             msg = "[Failure] {} - Internet is not reachable. Retrying in {} mins.".format(
@@ -97,7 +98,7 @@ def deploy_data_logger(
             )
             print(msg)
 
-            sleep(60 * update_interval)
+            sleep(60*update_interval)
 
 
 def webpage2soup(url: str, parser: Optional[str] = "html.parser") -> BeautifulSoup:
