@@ -35,6 +35,9 @@ def update_plots():
             shell=True, stdout=cmd.DEVNULL)
     cmd.run("git push -u origin master -f", check=True,
             shell=True, stdout=cmd.DEVNULL)
+
+    cmd.run("git checkout master",
+            check=True, shell=True)
     print("[Success] Update plots were pushed to the webpage.")
 
 
