@@ -8,10 +8,6 @@ def update_plots():
     data = import_logged_data()
     data = prune_data(data)
 
-    # needs to be run before saving the figures, as they need to be changed in webpage
-    cmd.run("git checkout webpage",
-            check=True, shell=True, stdout=cmd.DEVNULL)
-
     fig, ax = plot_capacity_matrix(
         data, y_axis="weekday", x_axis="min", x_increment=30, figsize=(15, 5)
     )
@@ -36,9 +32,12 @@ def update_plots():
     cmd.run("git push", check=True,
             shell=True, stdout=cmd.DEVNULL)
 
-    cmd.run("git checkout master",
-            check=True, shell=True, stdout=cmd.DEVNULL)
     print("[Success] Update plots were pushed to the webpage.")
+
+
+# needs to be run before saving the figures, as they need to be changed in webpage
+    cmd.run("git checkout webpage",
+            check=True, shell=True, stdout=cmd.DEVNULL)
 
 
 deploy_data_logger(update_interval=5, update_func=update_plots, run_every=1)
