@@ -33,7 +33,7 @@ def update_plots():
             check=True, shell=True, stdout=cmd.DEVNULL)
     cmd.run(f"git commit -m '{msg}'", check=True,
             shell=True, stdout=cmd.DEVNULL)
-    cmd.run("git push -u origin master -f", check=True,
+    cmd.run("git push", check=True,
             shell=True, stdout=cmd.DEVNULL)
 
     cmd.run("git checkout master",
