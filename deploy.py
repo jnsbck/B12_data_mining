@@ -8,6 +8,10 @@ def update_plots():
     data = import_logged_data()
     data = prune_data(data)
 
+    # needs to be run before saving the figures, as they need to be changed in webpage
+    cmd.run("git checkout webpage",
+            check=True, shell=True)
+
     fig, ax = plot_capacity_matrix(
         data, y_axis="weekday", x_axis="min", x_increment=30, figsize=(15, 5)
     )
@@ -25,8 +29,6 @@ def update_plots():
     # Push everything to git
     msg = "Update to plots. @ %s" % datetime.strftime(
         datetime.now(), "%H:%M, %m/%d/%Y")
-    cmd.run("git checkout webpage",
-            check=True, shell=True, stdout=cmd.DEVNULL)
     cmd.run("git add capacity_matrix.png capacity_timeline.png",
             check=True, shell=True, stdout=cmd.DEVNULL)
     cmd.run(f"git commit -m '{msg}'", check=True,
@@ -36,4 +38,4 @@ def update_plots():
     print("[Success] Update plots were pushed to the webpage.")
 
 
-deploy_data_logger(update_interval=5, update_func=update_plots, run_every=3)
+deploy_data_logger(update_interval=5, update_func=update_plots, run_every=1)
