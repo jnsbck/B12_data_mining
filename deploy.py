@@ -23,12 +23,16 @@ def update_plots():
     plt.close()
 
     # Push everything to git
-    # msg = "Update to plots. @ %s" % datetime.strftime(
-    #     datetime.now(), "%H:%M, %m/%d/%Y")
-    # cmd.run("git add capacity_matrix.png capacity_timeline.png",
-    #         check=True, shell=True)
-    # cmd.run(f"git commit -m '{msg}'", check=True, shell=True)
-    # cmd.run("git push -u origin master -f", check=True, shell=True)
+    msg = "Update to plots. @ %s" % datetime.strftime(
+        datetime.now(), "%H:%M, %m/%d/%Y")
+    cmd.run("git checkout webpage",
+            check=True, shell=True, stdout=cmd.DEVNULL)
+    cmd.run("git add capacity_matrix.png capacity_timeline.png",
+            check=True, shell=True, stdout=cmd.DEVNULL)
+    cmd.run(f"git commit -m '{msg}'", check=True,
+            shell=True, stdout=cmd.DEVNULL)
+    cmd.run("git push -u origin master -f", check=True,
+            shell=True, stdout=cmd.DEVNULL)
 
 
 deploy_data_logger(update_interval=1, update_func=update_plots, run_every=1)
