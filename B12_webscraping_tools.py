@@ -28,8 +28,60 @@ from typing import Tuple, List, Optional
 from numpy import ndarray
 
 
+def prune_data(data: DataFrame, between: Optional[Tuple[int]] = None) -> DataFrame:
+    """Gets rid of the uneccessary data when the B12 is not open.
+
+    Removes datapoints outside of a specified time intervall, or if
+    nothing is specified, the opening times from the B12 website are used.
+
+    This function can be used to free up disk / memory space, by overwriting
+    the existing logfiles, that contain datapoints, when the B12 is closed.
+
+    Args:
+        data: Occupancy data.
+        between: Outside of this intervall data will be disregarged.
+            If nothing is specified, the opening times are used.
+
+    Returns:
+        data with uneccessary data points removed.
+    """
+    if between != None:
+        after_opening = np.array(data.index.time > time(8, 0))
+        b4_closing = np.array(data.index.time < time(23, 0))
+        is_open = np.logical_and(after_opening, b4_closing)
+
+        return data[is_open]
+
+    else:
+        opening_times = {"Mon": ["09:30", "23:00"],
+                         "Tue": ["09:30", "23:00"],
+                         "Wed": ["08:30", "23:00"],
+                         "Thu": ["12:30", "23:00"],
+                         "Fri": ["09:30", "23:00"],
+                         "Sat": ["10:00", "22:00"],
+                         "Sun": ["10:00", "21:30"]}
+
+        def map_openinghours2time(x, idx): return datetime.strptime(
+            opening_times[x][idx], "%H:%M").time()
+
+        def day2time_mapper(x): return [map_openinghours2time(
+            x, 0), map_openinghours2time(x, 1)]
+
+        weekday = np.array(list(opening_times.keys()))
+        weekdays = weekday[data.index.weekday]
+        open4theday = np.array(list(map(day2time_mapper, weekdays)))
+
+        after_opening = data.index.time > open4theday[:, 0]
+        b4_closing = data.index.time < open4theday[:, 1]
+        is_open = np.logical_and(after_opening, b4_closing)
+
+        return data[is_open]
+
+
 def import_logged_data(loc: str = "./log.csv") -> DataFrame:
     """Import logged capacity data for B12 as DataFrame.
+
+    Converts column with datetime str into datetime index.
 
     Args:
         loc: Location of logfile.
@@ -67,6 +119,7 @@ def deploy_data_logger(
             timestamp_str, save2file)
         print(msg)
 
+    # Check occupancy in regular intervals, while catching network errors.
     while True:
         timestamp = datetime.now()
         timestamp_str = datetime.strftime(timestamp, "%H:%M, %m/%d/%Y")
@@ -288,7 +341,7 @@ def plot_avg_capacity(
             specified the first datapoint is chosen.
         end_datetime: The ending timestamp can be specified. If none is specified
             the last datapoint is chosen.
-        time_binsize: XM, XH, XD, XW specify the time in minutes, hours, days or 
+        time_binsize: XT, XH, XD, XW specify the time in minutes, hours, days or 
             weeks, where X can be a number, i.e. 7D.
         quantity: The quantity to plot. Usually either capacity or free spots.
             Can however also be a custom quantity.
