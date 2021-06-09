@@ -369,6 +369,7 @@ def plot_capacity_matrix(
     figsize: Tuple[int, int] = (15, 15),
     y_axis: str = "weekday",
     x_axis: str = "hour",
+    x_increment: int = 1,
     quantity: str = "capacity",
     start_datetime: Optional[str] = None,
     end_datetime: Optional[str] = None,
@@ -387,6 +388,8 @@ def plot_capacity_matrix(
         figsize: Specifies figure dimensions.
         y_axis: Size of timebins in y dimension.
         x_axis: Size of timebins in x dimension.
+        x_increment: Increments the x timebins.
+            Example x_axis = min, x_increment = 30 --> 30min increments.
         quantity: The quantity to plot. Usually either capacity or free spots.
             Can however also be a custom quantity.
         start_datetime: The starting timestamp can be specified. If none is 
@@ -411,14 +414,16 @@ def plot_capacity_matrix(
         data = data[start_datetime:]
     if end_datetime != None:
         data = data[:end_datetime]
+    if "weekday" in x_axis.lower():
+        x_increment = 1
 
     binned_cap = (
         pd.Series(index=data.index, data=np.array(data[quantity]))
-        .resample(time_intervalls[x_axis])
+        .resample(str(x_increment) + time_intervalls[x_axis])
         .mean()
     )
     time_padding = pd.Series(np.nan, index=pd.date_range(
-        start="01/01/2021", end="01/01/2022", freq=time_intervalls[x_axis]))
+        start="01/01/2021", end="01/01/2022", freq=str(x_increment) + time_intervalls[x_axis]))
 
     if "weekday" in y_axis.lower():
         for i in range(7):
