@@ -46,4 +46,4 @@ def update_plots():
         print("[Failure] Updated plots could not be pushed to GitHub.")
 
 
-deploy_data_logger(update_interval=5, update_func=update_plots, run_every=1)
+deploy_data_logger(update_interval=5, update_func=update_plots, run_every=3)
