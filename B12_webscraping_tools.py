@@ -179,7 +179,7 @@ def deploy_data_logger(
                 update_func(*args)
                 counter = 0
 
-        sleep(update_interval)
+        sleep(60*update_interval)
 
 
 def webpage2soup(url: str, parser: Optional[str] = "html.parser") -> BeautifulSoup:
