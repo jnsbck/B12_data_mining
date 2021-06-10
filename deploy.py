@@ -30,18 +30,20 @@ def update_plots():
         ax.set_title("Todays traffic at the B12.")
         plt.savefig("capacity_timeline.png", facecolor="white")
         plt.close()
-
+    try:
         # Push everything to git
-    msg = "Update to plots. @ %s" % datetime.strftime(
-        datetime.now(), "%H:%M, %m/%d/%Y")
-    cmd.run("git add capacity_matrix.png capacity_timeline.png",
-            check=True, shell=True, stdout=cmd.DEVNULL)
-    cmd.run(f"git commit -m '{msg}'", check=True,
-            shell=True, stdout=cmd.DEVNULL)
-    cmd.run("git push", check=True,
-            shell=True, stdout=cmd.DEVNULL)
+        msg = "Update to plots. @ %s" % datetime.strftime(
+            datetime.now(), "%H:%M, %m/%d/%Y")
+        cmd.run("git add capacity_matrix.png capacity_timeline.png",
+                check=True, shell=True, stdout=cmd.DEVNULL)
+        cmd.run(f"git commit -m '{msg}'", check=True,
+                shell=True, stdout=cmd.DEVNULL)
+        cmd.run("git push", check=True,
+                shell=True, stdout=cmd.DEVNULL)
 
-    print("[Success] Update plots were pushed to the webpage.")
+        print("[Success] Updated plots were pushed to GitHub.")
+    except:
+        print("[Failure] Updated plots could not be pushed to GitHub.")
 
 
 deploy_data_logger(update_interval=5, update_func=update_plots, run_every=1)
