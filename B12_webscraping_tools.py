@@ -139,8 +139,8 @@ def deploy_data_logger(
         print(msg)
 
     # Check occupancy in regular intervals, while catching network errors.
+    counter = 0
     while True:
-        counter = 0
         timestamp = datetime.now()
         timestamp_str = datetime.strftime(timestamp, "%H:%M, %m/%d/%Y")
         if online():
@@ -179,7 +179,7 @@ def deploy_data_logger(
                 update_func(*args)
                 counter = 0
 
-        sleep(60 * update_interval)
+        sleep(update_interval)
 
 
 def webpage2soup(url: str, parser: Optional[str] = "html.parser") -> BeautifulSoup:
