@@ -447,6 +447,7 @@ def plot_capacity_matrix(
             "{}:00".format(int(i*x_increment)) for i in keys if int(i*x_increment) >= 10
         ]
 
+        ax.locator_params(axis='x', nbins=len(keys))
         ax.set_xticks(keys)
         ax.set_xticklabels(timestamps)
 
@@ -456,8 +457,9 @@ def plot_capacity_matrix(
             "0{}:00".format(int(i*x_increment / 60)) for i in keys if int(i * x_increment / 60) < 10
         ] + ["{}:00".format(int(i*x_increment / 60)) for i in keys if int(i * x_increment / 60) >= 10]
 
-        ax.set_xticks(keys[::12])
-        ax.set_xticklabels(timestamps[::12])
+        ax.locator_params(axis='x', nbins=len(keys[::6]))
+        ax.set_xticks(keys[::6])
+        ax.set_xticklabels(timestamps[::6])
 
     if "month" in y_axis.lower():
         keys = list(range(12))
@@ -500,6 +502,9 @@ def plot_capacity_matrix(
             "Dec",
         ]
         lables = [months[int(x_increment*key)] for key in keys]
+        ax.locator_params(axis='x', nbins=6)
+
+        ax.locator_params(axis='x', nbins=len(keys))
         ax.set_xticks(keys)
         ax.set_xticklabels(lables)
 
@@ -535,6 +540,7 @@ def plot_capacity_matrix(
             weekdays_dict.get(t, ax.get_xticks()[i])
             for i, t in enumerate(ax.get_xticks())
         ]
+        ax.locator_params(axis='x', nbins=len(keys))
         ax.set_xticks(ax.get_xticks().tolist())
         ax.set_xticklabels(xticklabels)
         ax.set_xlim(0, 6)
