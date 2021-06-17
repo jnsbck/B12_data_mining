@@ -10,6 +10,7 @@ import requests  # fetches html content of a website
 
 # for catching timeout for website response
 from urllib.request import HTTPError
+from requests.exceptions import HTTPError as ReuqestsError
 from urllib.request import urlopen
 from urllib.request import URLError
 
@@ -167,6 +168,12 @@ def deploy_data_logger(
                 )
                 print(msg)
 
+            except ReuqestsError:
+                msg = "[Failure] {} - Encountered some unknown error. Retrying in {} mins".format(
+                    timestamp_str, update_interval
+                )
+                print(msg)
+
         else:
             msg = "[Failure] {} - Internet is not reachable. Retrying in {} mins.".format(
                 timestamp_str, update_interval
@@ -179,7 +186,7 @@ def deploy_data_logger(
                 update_func(*args)
                 counter = 0
 
-        sleep(60*update_interval)
+        sleep(60*update_interval+np.random.randint(-30, 30))
 
 
 def webpage2soup(url: str, parser: Optional[str] = "html.parser") -> BeautifulSoup:
