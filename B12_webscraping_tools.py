@@ -157,23 +157,27 @@ def deploy_data_logger(
                 print(msg)
 
             except HTTPError:
-                msg = "[Failure] {} - Encountered some unknown error. Retrying in {} mins".format(
+                msg = "[Failure] {} - Encountered some unknown error #1. Retrying in {} mins".format(
                     timestamp_str, update_interval
                 )
                 print(msg)
 
             except URLError:
-                msg = "[Failure] {} - Encountered some unknown error. Retrying in {} mins".format(
+                msg = "[Failure] {} - Encountered some unknown error  #2. Retrying in {} mins".format(
                     timestamp_str, update_interval
                 )
                 print(msg)
 
             except ReuqestsError:
-                msg = "[Failure] {} - Encountered some unknown error. Retrying in {} mins".format(
+                msg = "[Failure] {} - Encountered some unknown error  #3. Retrying in {} mins".format(
                     timestamp_str, update_interval
                 )
                 print(msg)
-
+            except:
+                msg = "[Failure] {} - Encountered some unknown error  #4. Retrying in {} mins".format(
+                    timestamp_str, update_interval
+                )
+                print(msg)
         else:
             msg = "[Failure] {} - Internet is not reachable. Retrying in {} mins.".format(
                 timestamp_str, update_interval
