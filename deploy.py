@@ -24,7 +24,8 @@ def update_plots():
         plt.savefig("capacity_timeline.png", facecolor="white")
         plt.close()
     except TypeError:
-        print("[Failure] No data to plot. The B12 might be closed")
+        print("[Failure] %s - No data to plot. The B12 might be closed" % datetime.strftime(
+            datetime.now(), "% H: % M, % m/%d/%Y"))
     try:
         # Push everything to git
         msg = "Update to plots. @ %s" % datetime.strftime(
