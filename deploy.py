@@ -24,12 +24,7 @@ def update_plots():
         plt.savefig("capacity_timeline.png", facecolor="white")
         plt.close()
     except TypeError:
-        ax = plot_avg_capacity(
-            data, time_binsize="30T", start_datetime=datetime.today().date(), figsize=(15, 5)
-        )
-        ax.set_title("Todays traffic at the B12.")
-        plt.savefig("capacity_timeline.png", facecolor="white")
-        plt.close()
+        print("[Failure] No data to plot. The B12 might be closed")
     try:
         # Push everything to git
         msg = "Update to plots. @ %s" % datetime.strftime(
